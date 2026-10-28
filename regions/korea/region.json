@@ -1,0 +1,25 @@
+{
+ "name": "South Korea",
+ "crs": "EPSG:5179",
+ "bounds": [
+  700000,
+  1400000,
+  1312000,
+  2100000
+ ],
+ "outer_bbox": [
+  115,
+  30,
+  135,
+  45
+ ],
+ "utc_offset": 9,
+ "active_network": false,
+ "train_years": [
+  2018,
+  2019,
+  2020,
+  2021
+ ],
+ "selection_year": 2022
+}

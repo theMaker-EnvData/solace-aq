@@ -1,0 +1,25 @@
+{
+ "name": "Benelux and Rhine",
+ "crs": "+proj=aeqd +lat_0=50.7 +lon_0=6.5 +datum=WGS84 +units=m +no_defs",
+ "bounds": [
+  -306000,
+  -350000,
+  306000,
+  350000
+ ],
+ "outer_bbox": [
+  -3.5,
+  43.25,
+  16.5,
+  58.25
+ ],
+ "utc_offset": 1,
+ "active_network": true,
+ "train_years": [
+  2018,
+  2019,
+  2020,
+  2021
+ ],
+ "selection_year": 2022
+}

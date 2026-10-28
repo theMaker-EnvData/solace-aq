@@ -1,0 +1,12 @@
+The trained weights and regional constants in regions/*/ (weights.pt, variants/*.pt, constants.npz, oi_*.pt) are
+Copyright (c) 2026 TK Lee, EnvDataLab, and licensed under the Creative Commons Attribution-NonCommercial 4.0
+International License (CC BY-NC 4.0): https://creativecommons.org/licenses/by-nc/4.0/
+
+You may share and adapt them for non-commercial purposes with attribution (cite the paper and this repository).
+Commercial use requires a separate agreement with the author.
+
+regions/*/static.npz are 4-km aggregates of public datasets and keep their sources' terms: elevation from WorldClim 2.1
+(Fick and Hijmans, 2017), land-cover fractions from the Copernicus Climate Change Service land cover 2022 (contains
+modified Copernicus Climate Change Service information), population from WorldPop 2022 (CC BY 4.0).
+
+Station lists (regions/*/stations.csv) give the locations of public monitoring stations as published by their operators.

@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software or the weights, please cite the paper and this repository."
+title: "SOLACE: station-trained regional air-quality forecasting"
+type: software
+authors:
+  - family-names: Lee
+    given-names: TK
+    affiliation: EnvDataLab
+license: MIT
+repository-code: "https://github.com/theMaker-EnvData/solace-aq"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Lee
+      given-names: TK
+      affiliation: EnvDataLab
+  title: "A station-trained process model forecasts air quality without regional emission inventories"
+references:
+  - type: dataset
+    title: "Data for 'A station-trained process model forecasts air quality without regional emission inventories'"
+    authors:
+      - family-names: Lee
+        given-names: TK
+    doi: 10.5281/zenodo.23728108

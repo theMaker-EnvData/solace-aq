@@ -1,0 +1,25 @@
+{
+ "name": "Taiwan",
+ "crs": "EPSG:3826",
+ "bounds": [
+  -56000.0,
+  2271799.629713532,
+  556000.0,
+  2971799.629713532
+ ],
+ "outer_bbox": [
+  111,
+  16.25,
+  131,
+  31.25
+ ],
+ "utc_offset": 8,
+ "active_network": false,
+ "train_years": [
+  2018,
+  2019,
+  2020,
+  2021
+ ],
+ "selection_year": 2022
+}

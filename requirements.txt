@@ -1,0 +1,8 @@
+numpy>=1.24
+pandas>=2.0
+torch>=2.1
+scipy>=1.10
+pyproj>=3.5
+netCDF4>=1.6
+lightgbm>=4.0
+pytest>=7

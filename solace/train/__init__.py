@@ -1,0 +1,1 @@
+"""Regional preparation and training."""
