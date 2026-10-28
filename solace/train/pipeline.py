@@ -42,7 +42,7 @@ def year_rows(year, epoch):
     return slice(a, a + caches.hours_in(year))
 
 
-def prepare(region_dir, archive_dir, observations_path, work, log=None):
+def prepare(region_dir, archive_dir, observations_path, work, log=None, covariance_steps=None):
     region_dir, work = Path(region_dir), Path(work)
     work.mkdir(parents=True, exist_ok=True)
     log = log or log_to(work / "prepare.log")
@@ -85,7 +85,7 @@ def prepare(region_dir, archive_dir, observations_path, work, log=None):
             keep = np.isfinite(Y[:, ~h]).sum(1) >= observations.COVERAGE * np.maximum(live.sum(1), 1)
         c = covfit.CONFIG.get(sp, covfit.DEFAULT)
         log(f"OI covariance {sp}: {int(keep.sum())} hours")
-        cov = covfit.fit(Y[keep], xy[el], h, c["steps"], c["batch"], cosine=c["cosine"], sparse=c["sparse"], log=log)
+        cov = covfit.fit(Y[keep], xy[el], h, covariance_steps or c["steps"], c["batch"], cosine=c["cosine"], sparse=c["sparse"], log=log)
         torch.save(cov.state_dict(), out)
 
     adir = work / "analyses"
@@ -162,11 +162,13 @@ def open_years(region, work, years, epoch):
 
 
 def train(region_dir, work, seed=0, log=None, pretrain_steps=pretrain.CONFIG["steps"], steps=full.CONFIG["steps"],
-          selection_windows=full.CONFIG["selection_windows"], experiment_a=False):
+          selection_windows=full.CONFIG["selection_windows"], experiment_a=False, device=None):
     region_dir, work = Path(region_dir), Path(work)
     log = log or log_to(work / "train.log")
     region = load_region(region_dir)
     pins = exchange.PRUNE["prune:all"] if experiment_a else None
+    device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    log(f"training on {device}")
     cfg = region.config
     years, train_years, sel_year = years_of(cfg), cfg["train_years"], cfg["selection_year"]
     obs, data = open_years(region, work, years, years[0])
@@ -187,7 +189,7 @@ def train(region_dir, work, seed=0, log=None, pretrain_steps=pretrain.CONFIG["st
         sel = pretrain.Selection(Y, tf, data[sel_year].c["met"], idx, region.station_km, held, region.covariance("pm25"), Eh,
                                  region.p4, region.rv, region.rw)
         best = pretrain.train([data[y] for y in train_years], sel, held, Eh, region.p4, region.rv, region.rw, steps=pretrain_steps, seed=seed,
-                              log=log, pins=pins)
+                              log=log, pins=pins, device=device)
         torch.save(best[1], pfile)
         log(f"pre-training selected step {best[2]} (score {best[0]:.4f})")
 
@@ -196,6 +198,6 @@ def train(region_dir, work, seed=0, log=None, pretrain_steps=pretrain.CONFIG["st
     torch.manual_seed(seed)
     model = full.initial_model(torch.load(pfile, weights_only=True), mu, sd)
     sel = full.Selection(data[sel_year], held, Eh, n=selection_windows)
-    best = full.train(model, [data[y] for y in train_years], sel, region, held, Eh, steps=steps, seed=seed, log=log, pins=pins)
+    best = full.train(model, [data[y] for y in train_years], sel, region, held, Eh, steps=steps, seed=seed, log=log, pins=pins, device=device)
     torch.save(best[1], region_dir / "weights.pt")
     log(f"training selected step {best[2]} (score {best[0]:.4f})")

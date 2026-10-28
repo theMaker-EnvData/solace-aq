@@ -78,6 +78,12 @@ class Selection:
         cells = torch.as_tensor(np.c_[np.repeat(np.arange(NY) * 4 + 2.0, NX), np.tile(np.arange(NX) * 4 + 2.0, NY)].astype(np.float32))
         with torch.no_grad():
             self.Kss, self.Kcs, self.r = cov.k(xs, xs), cov.k(cells, xs), float(torch.exp(cov.logr))
+        self.device = torch.device("cpu")
+
+    def to(self, device):
+        self.device = torch.device(device)
+        self.Kss, self.Kcs, self.p4, self.rv, self.rw = (x.to(device) for x in (self.Kss, self.Kcs, self.p4, self.rv, self.rw))
+        return self
 
     def analysis(self, vals, valid):
         v0 = valid.float()
@@ -92,19 +98,20 @@ class Selection:
     @torch.no_grad()
     def score(self, model):
         model.eval()
-        keep = torch.as_tensor(~self.held)
+        dev = self.device
+        keep = torch.as_tensor(~self.held, device=dev)
         hj = np.where(self.held)[0]
         P, O = {h: [] for h in LEADS}, {h: [] for h in LEADS}
         for b in range(0, len(self.idx), self.batch):
             t0 = self.idx[b:b + self.batch]
-            y0 = torch.as_tensor(self.Y[t0])
+            y0 = torch.as_tensor(self.Y[t0], device=dev)
             c = self.analysis(y0, torch.isfinite(y0) & keep[None])
-            met = torch.as_tensor(np.stack([np.asarray(self.met[t:t + 24], np.float32) for t in t0]))
-            tf = torch.as_tensor(np.stack([self.tf[t:t + 24] for t in t0]))
+            met = torch.as_tensor(np.stack([np.asarray(self.met[t:t + 24], np.float32) for t in t0]), device=dev)
+            tf = torch.as_tensor(np.stack([self.tf[t:t + 24] for t in t0]), device=dev)
             for s in range(24):
                 c = model(c, to_cells(met[:, s], self.rv, self.rw), tf[:, s])
                 if s + 1 in LEADS:
-                    P[s + 1].append(sample_points(c, self.p4)[:, 0][:, hj].numpy())
+                    P[s + 1].append(sample_points(c, self.p4)[:, 0][:, hj].cpu().numpy())
                     O[s + 1].append(self.Y[t0 + s + 1][:, hj])
         model.train()
         return float(np.mean([rmse(np.concatenate(P[h]), np.concatenate(O[h])) / self.Eh[h - 1] for h in LEADS]))
@@ -116,35 +123,37 @@ def rmse(p, o):
 
 
 def train(years, selection, held, Eh, p4, rv, rw, steps=CONFIG["steps"], batch=CONFIG["batch"], seed=0, log=None, every=CONFIG["every"],
-          pins=None):
-    """years: list of windows.Year (training years). Returns the EMA weights with the best selection score.
+          pins=None, device="cpu"):
+    """years: list of windows.Year (training years). Returns the EMA weights (on the CPU) with the best selection score.
     pins: {key: value} of weights held fixed (keys of the full model; the surface-transport ones apply here)."""
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
-    model = SurfaceStep()
+    model = SurfaceStep().to(device)
+    p4, rv, rw = p4.to(device), rv.to(device), rw.to(device)
+    selection.to(device)
     if pins:
         pin(model, {k[len("inner."):]: v for k, v in pins.items() if k.startswith(("inner.blend.", "inner.kap."))})
     ema = EMA(model, CONFIG["ema"])
     opt = torch.optim.Adam(model.parameters(), lr=CONFIG["lr"])
     sched = torch.optim.lr_scheduler.LambdaLR(opt, warmup_cosine(CONFIG["warmup"], steps))
-    hm = torch.as_tensor(held)
-    w_lead = torch.as_tensor(1.0 / Eh ** 2, dtype=torch.float32)
+    hm = torch.as_tensor(held, device=device)
+    w_lead = torch.as_tensor(1.0 / Eh ** 2, dtype=torch.float32, device=device)
     sizes = np.array([len(y.idx) for y in years])
     pr = sizes / sizes.sum()
-    evaluator = SurfaceStep()
+    evaluator = SurfaceStep().to(device)
     best = (np.inf, None, -1)
     for it in range(steps):
         if it % every == 0 or it == steps - 1:
             evaluator.load_state_dict(ema.state())
             sc = selection.score(evaluator)
             if sc < best[0]:
-                best = (sc, ema.state(), it)
+                best = (sc, {k: v.cpu() for k, v in ema.state().items()}, it)
             if log is not None:
                 log(f"pretrain it {it} selection {sc:.4f} best_it {best[2]}")
         hours = curriculum(it, steps)
         src = years[rng.choice(len(years), p=pr)]
         ns = np.sort(rng.choice(len(src.idx), batch, replace=False))
-        c, met, obs, tf = src.pm25_batch(ns, hours)
+        c, met, obs, tf = (x.to(device) for x in src.pm25_batch(ns, hours))
         pred, _ = rollout(model, c, met, tf, p4, rv, rw, hours)
         m = (torch.isfinite(obs) & ~hm[None, None]).float()
         mse_h = (((pred - torch.nan_to_num(obs)) ** 2) * m).sum((0, 2)) / m.sum((0, 2)).clamp(min=1)

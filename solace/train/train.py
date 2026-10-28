@@ -4,6 +4,8 @@ Loss = mean over species and leads of MSE_{h,s} / E_{h,s}^2 at the input station
 years) + the outer model's log error outside the inner domain. Adam (networks 5e-4, scalar constants 1e-2), warm-up 100
 steps then cosine decay, gradient clipping at 1, EMA 0.999. The EMA weights are scored every 250 steps on 300 windows of
 the selection year at the held-out stations; the best score is kept."""
+import copy
+
 import numpy as np
 import torch
 
@@ -62,10 +64,11 @@ class Selection:
     def score(self, model, region):
         model.eval()
         P, O = {h: [] for h in SELECTION_LEADS}, {h: [] for h in SELECTION_LEADS}
+        dev = region.p4.device
         for b in range(0, len(self.idx), self.batch):
             batch, obs = self.year.batch(self.idx[b:b + self.batch], self.horizon)
-            p, _ = model(batch, region, self.horizon)
-            p, ob = p.numpy(), obs.numpy()
+            p, _ = model({k: v.to(dev) for k, v in batch.items()}, region, self.horizon)
+            p, ob = p.cpu().numpy(), obs.numpy()
             for h in SELECTION_LEADS:
                 P[h].append(p[:, h - 1][:, :, self.held])
                 O[h].append(ob[:, h - 1][:, :, self.held])
@@ -75,13 +78,18 @@ class Selection:
 
 
 def train(model, years, selection, region, held, Eh, steps=CONFIG["steps"], batch=CONFIG["batch"], seed=0, log=None,
-          every=CONFIG["every"], horizon=HORIZON, pins=None, frozen=(), points=None, targets=None, loss=None, final=None):
+          every=CONFIG["every"], horizon=HORIZON, pins=None, frozen=(), points=None, targets=None, loss=None, final=None,
+          device="cpu"):
     """years: training windows.Year list; Eh [6, 48]. Returns (score, EMA state, step) of the selected weights.
     pins: {key: value} of weights held fixed during training (Experiment A).
     Synthetic supervision (solace.synthetic): frozen, prefixes of weights not trained; points, the positions [P, 2] (cells)
     where the training rollout is scored; targets(inputs, obs) replaces the observations; loss(pred, targets, aux)
-    replaces the loss. final: optional dict that receives the last EMA and raw weights."""
+    replaces the loss. final: optional dict that receives the last EMA and raw weights. The returned and final weights are
+    on the CPU."""
     rng = np.random.default_rng(seed)
+    model.to(device)
+    region = copy.copy(region).to(device)
+    points = None if points is None else points.to(device)
     if pins:
         pin(model, pins)
     for n, p in model.named_parameters():
@@ -90,9 +98,9 @@ def train(model, years, selection, region, held, Eh, steps=CONFIG["steps"], batc
     ema = EMA(model, CONFIG["ema"])
     opt = optimizer(model)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, warmup_cosine(CONFIG["warmup"], steps))
-    evaluator = Solace()
-    hm = torch.as_tensor(held)
-    w_lead = torch.as_tensor(1.0 / Eh ** 2, dtype=torch.float32)
+    evaluator = Solace().to(device)
+    hm = torch.as_tensor(held, device=device)
+    w_lead = torch.as_tensor(1.0 / Eh ** 2, dtype=torch.float32, device=device)
     sizes = np.array([len(y.idx) for y in years])
     pr = sizes / sizes.sum()
     best = (np.inf, None, -1)
@@ -107,12 +115,13 @@ def train(model, years, selection, region, held, Eh, steps=CONFIG["steps"], batc
             evaluator.load_state_dict(ema.state())
             sc = selection.score(evaluator, region)
             if sc < best[0]:
-                best = (sc, ema.state(), it)
+                best = (sc, {k: v.cpu() for k, v in ema.state().items()}, it)
             if log is not None:
                 log(f"train it {it} selection {sc:.4f} best_it {best[2]}")
         src, ns = nxt
         nxt = draw()
         inputs, obs = src.batch(ns, horizon)
+        inputs, obs = {k: v.to(device) for k, v in inputs.items()}, obs.to(device)
         if targets is not None:
             obs = targets(inputs, obs)
         pred, aux = model(inputs, region, horizon, points=points)
@@ -124,6 +133,6 @@ def train(model, years, selection, region, held, Eh, steps=CONFIG["steps"], batc
         sched.step()
         ema.update(model)
     if final is not None:
-        final["ema"] = ema.state()
-        final["raw"] = {k: v.detach().clone() for k, v in model.state_dict().items()}
+        final["ema"] = {k: v.cpu() for k, v in ema.state().items()}
+        final["raw"] = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
     return best

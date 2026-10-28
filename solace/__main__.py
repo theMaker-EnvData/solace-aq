@@ -155,7 +155,7 @@ def cmd_prepare(a):
 
 def cmd_train(a):
     from .train import pipeline
-    pipeline.train(a.region_dir, a.work, seed=a.seed, experiment_a=a.experiment_a)
+    pipeline.train(a.region_dir, a.work, seed=a.seed, experiment_a=a.experiment_a, device=a.device)
 
 
 def main(argv=None):
@@ -196,6 +196,7 @@ def main(argv=None):
     q.add_argument("--work", required=True); q.set_defaults(fn=cmd_prepare)
     q = sub.add_parser("train"); q.add_argument("--region-dir", required=True); q.add_argument("--work", required=True)
     q.add_argument("--seed", type=int, default=0)
+    q.add_argument("--device", help="cuda or cpu (default: cuda when available)")
     q.add_argument("--experiment-a", action="store_true", help="hold the surface and residual-layer wind blends at 1, the learned "
                    "diffusion at 0 and a_12 at 0 throughout training")
     q.set_defaults(fn=cmd_train)

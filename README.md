@@ -135,7 +135,7 @@ The region folder needs `region.json` (projection, inner bounds, outer box, UTC 
 and `stations.csv` (`station_id`, `longitude`, `latitude`). The observations start at 1 January 00 UTC of the first
 training year. `prepare` fits the OI covariances, computes the analyses, the 30-day means, the input caches and the
 training constants. `train` runs the PM2.5 pre-training (4,000 steps) and the full training (2,000 steps, batch 4,
-48-h windows) and writes `weights.pt`. The full training needs about 6 GB of GPU memory.
+48-h windows) and writes `weights.pt`. Training uses the GPU when one is available (`--device`); the full training needs about 3 GB of GPU memory.
 
 These steps reproduce the procedure of the Taiwan, Israel, Netherlands-Rhine and Southern California models (training
 2018–2021, selection 2022 at the held-out stations). The Korea weights come from the original Korean run. That run used

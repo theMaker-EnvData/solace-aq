@@ -33,16 +33,19 @@ def land_sample(water, offset=0, step=2):
     return np.c_[yy[keep], xx[keep]].astype(np.float32)
 
 
-def supervision(region, teacher, arm, held, w_lead, water):
-    """(points, targets, loss) for solace.train.train."""
+def supervision(region, teacher, arm, held, w_lead, water, device="cpu"):
+    """(points, targets, loss) for solace.train.train (same device)."""
+    import copy
     S = len(held)
-    grid = torch.as_tensor(land_sample(water)) if arm == "D" else torch.zeros(0, 2)
+    region = copy.copy(region).to(device)
+    grid = torch.as_tensor(land_sample(water), device=device) if arm == "D" else torch.zeros(0, 2, device=device)
     points = torch.cat([region.p4, grid], 0)
-    model = Solace().eval()
+    model = Solace().eval().to(device)
     model.load_state_dict(teacher)
     for p in model.parameters():
         p.requires_grad_(False)
-    hm = torch.as_tensor(held)
+    hm = torch.as_tensor(held, device=device)
+    w_lead = w_lead.to(device)
 
     def targets(inputs, obs):
         with torch.no_grad():
