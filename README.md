@@ -15,7 +15,7 @@ This repository holds the model, training and analysis code and the trained weig
 > TK Lee. A station-trained process model forecasts air quality without regional emission inventories.
 
 The forecasts evaluated in the paper and the data behind its figures are archived at
-[doi:10.5281/zenodo.23728108](https://doi.org/10.5281/zenodo.23728108).
+[doi:10.5281/zenodo.23728107](https://doi.org/10.5281/zenodo.23728107).
 
 ## Relation to the paper's code
 
