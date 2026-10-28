@@ -70,7 +70,8 @@ A forecast needs:
    (PM in µg m⁻³, gases in ppb), stations in the order of `regions/<name>/stations.csv`, NaN for missing values. The
    rows must cover at least 720 h before the start time.
 3. **Meteorology and GEOS-CF**: an archive of monthly NetCDF files on the region's 0.25° outer grid. The layout is
-   described at the top of `solace/inputs.py`.
+   described at the top of `solace/inputs.py`. GEOS-CF gases and dust bins are distributed as mole fractions and must be
+   multiplied by 1e9 (gases in ppb, dust in µg kg⁻¹); PM2.5 is used as distributed (µg m⁻³).
 
 ```
 python -m solace forecast --region taiwan --archive ARCHIVE --observations obs.npy --obs-start 2023-01-01T00 \

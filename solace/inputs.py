@@ -5,7 +5,9 @@ Archive layout (one NetCDF file per variable and month, all hours of the month, 
     <archive>/ecmwf_arco/hourly/pressure/YYYYMM/{t,r,u,v,w}.nc          levels 925, 850, 700 hPa
     <archive>/geoscf_surface/YYYYMM/{pm25_rh35_gcc,pm25du_rh35_gcc,o3,no2,so2,co,dst2,dst3,dst4}.nc
     <archive>/geoscf_pressure/YYYYMM/{pm25_rh35_gcc,pm25du_rh35_gcc,o3,no2,so2,co}.nc   levels 975-700 hPa (8)
-Units as distributed (ERA5: K, m s-1, m, J m-2, %, Pa s-1; GEOS-CF: ug m-3, ppb, ug kg-1).
+Units expected in the archive: ERA5 as distributed (K, m s-1, m, J m-2, %, Pa s-1); GEOS-CF PM2.5 in ug m-3 as distributed,
+gases and dust bins converted from the distributed mole fractions (mol mol-1) by x 1e9: gases in ppb, dust in ug kg-1 (the
+GEOS-CF dust molecular weight equals that of air, so the mole fraction equals the mass fraction).
 """
 import calendar
 import datetime as dt
