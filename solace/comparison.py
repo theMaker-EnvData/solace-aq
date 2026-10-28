@@ -76,7 +76,8 @@ def fire_free(days, utc_offset, fires_json, crs, bounds, min_acres=10000):
 
 def skill(D, truth, stations, days, reference, W=None, rng=None, species=SPECIES, cases=None):
     """D: {model: [case, 48, 6, S]}; truth [case, 48, 6, S]; stations bool [S]; cases bool [case] (subset) or None;
-    reference: a model name or a sequence of names, the first available for the species is used.
+    reference: a model name or a sequence of names, the first available for the species is used;
+    species without any available reference are skipped.
     Returns rows for each window, species and model."""
     W = block_weights(days, rng) if W is None else W
     cases = np.ones(len(days), bool) if cases is None else cases
@@ -85,6 +86,9 @@ def skill(D, truth, stations, days, reference, W=None, rng=None, species=SPECIES
     for wn, sl in WINDOWS.items():
         for k, sp in enumerate(species):
             ms = [m for m in D if np.isfinite(D[m][:, :, k]).any()]
+            ref = next((r for r in ((reference,) if isinstance(reference, str) else reference) if r in ms), None)
+            if ref is None:
+                continue
             obs = truth[cases][:, sl, k][..., stations]
             ok = np.isfinite(obs)
             for m in ms:
@@ -92,7 +96,6 @@ def skill(D, truth, stations, days, reference, W=None, rng=None, species=SPECIES
             n = ok.sum((1, 2)).astype("f8")
             sse = {m: (np.where(ok, D[m][cases][:, sl, k][..., stations] - obs, 0.0).astype("f8") ** 2).sum((1, 2)) for m in ms}
             var = np.nanvar(np.where(ok, obs, np.nan))
-            ref = next(r for r in ((reference,) if isinstance(reference, str) else reference) if r in ms)
             rb = {m: np.sqrt(Wp @ sse[m] / (Wp @ n)) for m in ms}
             for m in ms:
                 r = np.sqrt(sse[m].sum() / n.sum())
