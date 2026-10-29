@@ -12,7 +12,7 @@ between the layers. An outer model on a 0.25° grid carries the boundary forward
 
 This repository holds the model, training and analysis code and the trained weights of the five regions of the paper:
 
-> TK Lee. A station-trained process model forecasts air quality without regional emission inventories.
+> TK Lee. Station-trained air-quality forecasts without regional emission inventories.
 
 The forecasts evaluated in the paper and the data behind its figures are archived at
 [doi:10.5281/zenodo.23728107](https://doi.org/10.5281/zenodo.23728107).
