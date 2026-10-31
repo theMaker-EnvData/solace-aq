@@ -15,6 +15,11 @@ preferred-citation:
       given-names: TK
       affiliation: EnvDataLab
   title: "Station-trained air-quality forecasts without regional emission inventories"
+  doi: 10.31223/X54Z4T
+  url: "https://doi.org/10.31223/X54Z4T"
+  publisher:
+    name: EarthArXiv
+  status: preprint
 references:
   - type: dataset
     title: "Data for 'Station-trained air-quality forecasts without regional emission inventories'"
